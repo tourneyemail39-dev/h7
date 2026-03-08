@@ -1,91 +1,58 @@
-import 'package:flutter/material.dart';
+Practical 7
 
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity >=0.7.0 <0.9.0;
 
-class MenuDemoPage extends StatefulWidget {
-  const MenuDemoPage({super.key});
+// Custom errors
+error InsufficientAmount(address sender);
+error InsufficientDonationAmount(address sender, uint amt);
 
-  @override
-  State<MenuDemoPage> createState() => _MenuDemoPageState();
+contract Donation {
+
+    // Event
+    event DonationMoreThan5Ether(address donor, uint amt);
+
+    address owner;
+
+    // Constructor
+    constructor() {
+        owner = msg.sender;
+    }
+
+    // Modifier
+    modifier only_owner(){
+        require(msg.sender == owner,"You're not the owner");
+        _;
+    }
+
+    // Donate function
+    function donate() public payable {
+
+        if(msg.value == 0){
+            revert InsufficientDonationAmount(msg.sender,msg.value);
+        }
+
+        if(msg.sender.balance <= 85e18){
+            revert InsufficientAmount(msg.sender);
+        }
+
+        if(msg.value > 5e18){
+            emit DonationMoreThan5Ether(msg.sender,msg.value);
+        }
+    }
+
+    // Withdraw function
+    function withdraw() public payable only_owner returns(bool){
+
+        uint curr_bal = address(this).balance;
+
+        (bool success,) = owner.call{value: curr_bal}("");
+
+        return success;
+    }
+
+    // View balance
+    function viewMyBalance() public view returns(uint){
+        return msg.sender.balance;
+    }
 }
-
-class _MenuDemoPageState extends State<MenuDemoPage> {
-  String selectedOption = "No option selected";
-  String selectedContext = "No context action";
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Menus Example"),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              setState(() {
-                selectedOption = value;
-              });
-            },
-            itemBuilder: (BuildContext context) {
-              return [
-                const PopupMenuItem(value: "Profile", child: Text("Profile")),
-                const PopupMenuItem(value: "Settings", child: Text("Settings")),
-                const PopupMenuItem(value: "Logout", child: Text("Logout")),
-              ];
-            },
-          ),
-        ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text("Options Menu: $selectedOption",
-                style: const TextStyle(fontSize: 18)),
-
-            const SizedBox(height: 30),
-
-            GestureDetector(
-              onLongPressStart: (details) async {
-                final selected = await showMenu<String>(
-                  context: context,
-                  position: RelativeRect.fromLTRB(
-                    details.globalPosition.dx,
-                    details.globalPosition.dy,
-                    details.globalPosition.dx,
-                    details.globalPosition.dy,
-                  ),
-                  items: [
-                    const PopupMenuItem(
-                        value: "Edit", child: Text("Edit")),
-                    const PopupMenuItem(
-                        value: "Delete", child: Text("Delete")),
-                    const PopupMenuItem(
-                        value: "Share", child: Text("Share")),
-                  ],
-                );
-                if (selected != null) {
-                  setState(() {
-                    selectedContext = selected;
-                  });
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                color: Colors.blue.shade100,
-                child: const Text(
-                  "Long press me for Context Menu",
-                  style: TextStyle(fontSize: 18),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            Text("Context Menu: $selectedContext",
-                style: const TextStyle(fontSize: 18)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
